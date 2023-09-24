@@ -1,0 +1,13 @@
+description: Nerf file
+source flux: 1
+ray set flux: 1
+inclination: [0, 0]
+azimuth: [0, 0]
+dimension units: 4
+loc: [0, 0, 0]
+rot: [0, 0, 0]
+ray format: 2
+flux type: 0
+format version: 1010
+wavelength: 0
+scale: [0, 0, 0]

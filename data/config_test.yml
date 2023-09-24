@@ -1,0 +1,12 @@
+Ray file: data/mapping_simple_the_true_pinhole.txt
+Nerf file: C:\outputs\test_bureau_2\nerfacto\2023-09-16_153142\config.yml
+Output file: test_extended.sdf
+Extended ray file: data/microlensxperia9875.dat
+Working directory: C:\\
+Scale: 0.0075
+Reference pose: '0276'
+Z translation: 3
+Y translation: -25
+X translation: -15
+Z rotation: 0
+Factor: 9945
