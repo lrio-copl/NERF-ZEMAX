@@ -7,7 +7,7 @@ python main2.py
 ```
 
 
-Roule la génération d'image standard
+Roule la génération de rayons standard
 
 ``` sh
 python main3.py
