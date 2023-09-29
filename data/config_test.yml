@@ -4,9 +4,12 @@ Output file: test_extended.sdf
 Extended ray file: data/microlensxperia9875.dat
 Working directory: C:\\
 Scale: 0.0075
-Reference pose: '0276'
-Z translation: 3
-Y translation: -25
-X translation: -15
+Reference pose: '0056'
+X translation: 0
+Y translation: 0
+Z translation: 0
+Z distance microlens: 0
+X rotation: 0
+Y rotation: 0
 Z rotation: 0
-Factor: 9945
+Factor: 65
