@@ -10,12 +10,11 @@ python main2.py
 Roule la génération de rayons standard
 
 ``` sh
-python main3.py
+python gui.py
 ```
 
 
-Roule la génération rapide d'image avec sliders XYZ
-
+Roule la visualisation avec génération rapide. Permet aussi la génération de rayons et l'écriture de YAML pour les coordonées du système.
 
 ## Config
 
@@ -32,6 +31,8 @@ Reference pose: '0276' #Pose de référence (comportement weird en ce moment)
 Z translation: 3 #Translation en Z par rapport àla pose
 Y translation: -25 #même chose en Y
 X translation: -15 #Même chose en X
-Z rotation: 0 #Désactivé pour le moment
-Factor: 9945 #Pour accélérer calcul de rayon pour nerf studio, ça dépend du nombres de rayons
+Z rotation: 3 #Translation en Z par rapport àla pose
+Y rotation: -25 #même chose en Y
+X rotation: -15 #Même chose en X
+Factor: 9945 #Pour accélérer calcul de rayon pour nerf studio, ça dépend du nombres de rayons. Ne pas toucher dans le fond
 ```
