@@ -71,27 +71,27 @@ class NerfRays:
         return rot_y
 
     def spherique(self, rays, R):
-        n = rays[:, 0] / 0.9875
-        m = rays[:, 1] / 0.9875
-        theta = 0.9875 / R
+        if R != 0:
+            n = rays[:, 0] / 0.9875
+            m = rays[:, 1] / 0.9875
+            theta = 0.9875 / R
+            trans_x = 0.9875 * n - R * np.sin(n * theta)
+            trans_y = 0.9875 * m - R * np.sin(m * theta)
+            trans_z = R - (R * np.cos(n * theta) * np.cos(m * theta))
 
-        trans_x = 0.9875 * n - R * np.sin(n * theta)
-        trans_y = 0.9875 * m - R * np.sin(m * theta)
-        trans_z = R - (R * np.cos(n * theta) * np.cos(m * theta))
+            rays[:, 0] -= trans_x
+            rays[:, 1] -= trans_y
+            rays[:, 2] -= trans_z
 
-        rays[:, 0] -= trans_x
-        rays[:, 1] -= trans_y
-        rays[:, 2] -= trans_z
+            theta = n * theta
+            phi = m * theta
 
-        theta = n * theta
-        phi = m * theta
+            rot_x_matrices = self.rot_x(phi)
+            rot_y_matrices = self.rot_y(theta)
 
-        rot_x_matrices = self.rot_x(phi)
-        rot_y_matrices = self.rot_y(theta)
+            c2w = np.einsum('bij,bjk->bik', rot_x_matrices, rot_y_matrices)
 
-        c2w = np.einsum('bij,bjk->bik', rot_x_matrices, rot_y_matrices)
-
-        rays[:, 3:] = np.einsum('bij,bj->bi', c2w[:, :3, :3], rays[:, 3:])
+            rays[:, 3:] = np.einsum('bij,bj->bi', c2w[:, :3, :3], rays[:, 3:])
 
         return rays
 
@@ -258,7 +258,7 @@ class NerfRays:
                 )
             )
             c2w = c2w_pose
-        ray_data = self.spherique(ray_data, 10-offset_microlens)
+        ray_data = self.spherique(ray_data, offset_microlens)
         ray_data = self.tranform_nerf_rays(
             ray_data,
             offset_trans[0],
