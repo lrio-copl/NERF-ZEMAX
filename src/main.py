@@ -13,7 +13,6 @@ test = loadtxt(
 # 0.9875 153x65
 # test[:, 3:] /= sqrt(sum(test[:, 3:] ** 2, axis=1)).reshape(-1, 1)
 # test[:, :3] *= 25.4
-test = 
 test[:, 3:] *= -1
 
 # print(test)

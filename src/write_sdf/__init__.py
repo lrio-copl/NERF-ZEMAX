@@ -10,11 +10,9 @@ WAVELENGTHS = [0.656, 0.566, 0.471]
 
 def write_sdf(output_file, rays, rgbaData, config=YAML_FILE_DEFAULT):
     yaml_file = load(open(config), Loader=CLoader)
-
     assert rays.shape[1] == 6
     assert rgbaData.shape[1] == 4
     assert rays.shape[0] == rgbaData.shape[0]
-
     with open(output_file, "wb") as file:
         file.write(struct.pack("i", yaml_file["format version"]))
         file.write(struct.pack("i", rays.shape[0] * 3))
