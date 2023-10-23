@@ -42,6 +42,59 @@ class NerfRays:
             )
         return output_rays
 
+    def rot_x(self, phi):
+        cos_phi = np.cos(phi)
+        sin_phi = np.sin(phi)
+        zeros = np.zeros_like(phi)
+        ones = np.ones_like(phi)
+    
+        rot_x = np.stack([
+            np.stack([ones, zeros, zeros, zeros], axis=-1),
+            np.stack([zeros, cos_phi, -sin_phi, zeros], axis=-1),
+            np.stack([zeros, sin_phi, cos_phi, zeros], axis=-1),
+            np.stack([zeros, zeros, zeros, ones], axis=-1)
+        ], axis=-2)
+    
+        return rot_x
+
+    def rot_y(self, theta):
+        cos_theta = np.cos(theta)
+        sin_theta = np.sin(theta)
+        zeros = np.zeros_like(theta)
+        ones = np.ones_like(theta)
+        rot_y = np.stack([
+            np.stack([cos_theta, zeros, sin_theta, zeros], axis=-1),
+            np.stack([zeros, ones, zeros, zeros], axis=-1),
+            np.stack([-sin_theta, zeros, cos_theta, zeros], axis=-1),
+            np.stack([zeros, zeros, zeros, ones], axis=-1)
+        ], axis=-2)
+        return rot_y
+
+    def spherique(self, rays, R):
+        if R != 0:
+            n = rays[:, 0] / 0.9875
+            m = rays[:, 1] / 0.9875
+            theta = 0.9875 / R
+            trans_x = 0.9875 * n - R * np.sin(n * theta)
+            trans_y = 0.9875 * m - R * np.sin(m * theta)
+            trans_z = R - (R * np.cos(n * theta) * np.cos(m * theta))
+
+            rays[:, 0] -= trans_x
+            rays[:, 1] -= trans_y
+            rays[:, 2] -= trans_z
+
+            theta = n * theta
+            phi = m * theta
+
+            rot_x_matrices = self.rot_x(phi)
+            rot_y_matrices = self.rot_y(theta)
+
+            c2w = np.einsum('bij,bjk->bik', rot_x_matrices, rot_y_matrices)
+
+            rays[:, 3:] = np.einsum('bij,bj->bi', c2w[:, :3, :3], rays[:, 3:])
+
+        return rays
+
     def load_model(self, yaml_file):
         from nerfstudio.utils.eval_utils import eval_setup
 
@@ -129,7 +182,7 @@ class NerfRays:
 
     def tranform_nerf_rays(
         self, ray_data, trans_x, trans_y, trans_z, micro_z, c2w, rot_x, rot_y, rot_z
-    ):
+    ):   
         ray_data[:, 1] += trans_x
         ray_data[:, 0] += trans_y
         ray_data = self.apply_c2w(
@@ -205,6 +258,7 @@ class NerfRays:
                 )
             )
             c2w = c2w_pose
+        ray_data = self.spherique(ray_data, offset_microlens)
         ray_data = self.tranform_nerf_rays(
             ray_data,
             offset_trans[0],
@@ -216,7 +270,6 @@ class NerfRays:
             offset_rot[1],
             offset_rot[2],
         )
-
         write_rgb = np.empty_like(ray_data[:, :3])
         write_depth = np.empty_like(ray_data[:, :1])
         write_acc = np.empty_like(ray_data[:, :1])
