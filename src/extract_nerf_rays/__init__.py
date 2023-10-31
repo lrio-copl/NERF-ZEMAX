@@ -7,6 +7,7 @@ from nerfstudio.process_data.realitycapture_utils import _get_rotation_matrix as
 from nerfstudio.cameras.rays import RayBundle
 from nerfstudio.exporter.exporter_utils import collect_camera_poses
 import nerfstudio.utils.poses as pose_utils
+from scipy.spatial.transform import Rotation as R
 
 
 class NerfRays:
@@ -42,43 +43,43 @@ class NerfRays:
             )
         return output_rays
 
-    def rot_x(self, phi):
-        cos_phi = np.cos(phi)
-        sin_phi = np.sin(phi)
-        zeros = np.zeros_like(phi)
-        ones = np.ones_like(phi)
-    
-        rot_x = np.stack([
-            np.stack([ones, zeros, zeros, zeros], axis=-1),
-            np.stack([zeros, cos_phi, -sin_phi, zeros], axis=-1),
-            np.stack([zeros, sin_phi, cos_phi, zeros], axis=-1),
-            np.stack([zeros, zeros, zeros, ones], axis=-1)
+    def incident(self, rays):
+        #générer les angles d'incidence différents
+        theta = np.linspace(-np.pi/2, np.pi/2, rays.shape[0])
+        phi = np.linspace(-np.pi/2, np.pi/2, rays.shape[0])
+
+        #calculer les cosinus directeurs
+        l = np.sin(phi) * np.cos(theta)
+        m = np.sin(phi) * np.sin(theta)
+        n = np.cos(phi)
+
+        v1 = np.array([l,m,n])
+        v2 = np.array([-v1[1], v1[0], n])
+        v2 -= np.sum(v2 * v1, axis= 0) * v1 
+        v3 = np.cross(v1, v2, axis=0)
+        v2 /= np.linalg.norm(v2)
+        v3 /= np.linalg.norm(v3)
+        matrices = np.stack([
+            np.stack(v3, axis=-1),
+            np.stack(v2, axis=-1),
+            np.stack(v1, axis=-1),
         ], axis=-2)
-    
-        return rot_x
 
-    def rot_y(self, theta):
-        cos_theta = np.cos(theta)
-        sin_theta = np.sin(theta)
-        zeros = np.zeros_like(theta)
-        ones = np.ones_like(theta)
-        rot_y = np.stack([
-            np.stack([cos_theta, zeros, sin_theta, zeros], axis=-1),
-            np.stack([zeros, ones, zeros, zeros], axis=-1),
-            np.stack([-sin_theta, zeros, cos_theta, zeros], axis=-1),
-            np.stack([zeros, zeros, zeros, ones], axis=-1)
-        ], axis=-2)
-        return rot_y
+        matrices = R.from_matrix(matrices)
+        rays[:, 3:] = matrices.apply(rays[:, 3:])
+        np.savetxt("rays_view.csv", rays, delimiter=",")
+        return rays
 
-    def spherique(self, rays, R):
-        if R != 0:
-            n = rays[:, 0] / 0.9875
-            m = rays[:, 1] / 0.9875
-            theta = 0.9875 / R
-            trans_x = 0.9875 * n - R * np.sin(n * theta)
-            trans_y = 0.9875 * m - R * np.sin(m * theta)
-            trans_z = R - (R * np.cos(n * theta) * np.cos(m * theta))
 
+
+    def spherique(self, rays, rayon, coef=np.zeros(1)):
+        if rayon != 0:
+            n = rays[:, 0]
+            m = rays[:, 1]
+            theta = 1 / rayon
+            trans_x = n - rayon * np.sin(n * theta)
+            trans_y = m - rayon * np.sin(m * theta)
+            trans_z = rayon - (rayon * np.cos(n * theta) * np.cos(m * theta))
             rays[:, 0] -= trans_x
             rays[:, 1] -= trans_y
             rays[:, 2] -= trans_z
@@ -86,12 +87,9 @@ class NerfRays:
             theta = n * theta
             phi = m * theta
 
-            rot_x_matrices = self.rot_x(phi)
-            rot_y_matrices = self.rot_y(theta)
-
-            c2w = np.einsum('bij,bjk->bik', rot_x_matrices, rot_y_matrices)
-
-            rays[:, 3:] = np.einsum('bij,bj->bi', c2w[:, :3, :3], rays[:, 3:])
+            angles = np.column_stack((phi, theta))
+            matrix = R.from_euler('xy', angles)
+            rays[:, 3:] = matrix.apply(rays[:,3:])
 
         return rays
 
@@ -258,6 +256,7 @@ class NerfRays:
                 )
             )
             c2w = c2w_pose
+        #ray_data = self.incident(ray_data)
         ray_data = self.spherique(ray_data, offset_microlens)
         ray_data = self.tranform_nerf_rays(
             ray_data,
