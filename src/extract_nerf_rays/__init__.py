@@ -55,16 +55,16 @@ class NerfRays:
 
     def incident(self, rays, lmn = None):
         if lmn is None:
-            theta = np.linspace(0, np.pi/2, rays.shape[0])
-            phi = np.linspace(0, np.pi/2, rays.shape[0])
+            theta = np.linspace(-np.pi/2, np.pi/2, rays.shape[0])
+            phi = np.linspace(-np.pi/2, np.pi/2, rays.shape[0])
             l = np.sin(phi) * np.cos(theta)
             m = np.sin(phi) * np.sin(theta)
             n = np.cos(phi)
-            lmn = np.concatenate([l, m, n])
-            lmn = lmn.reshape(-1, 3)
+            lmn = np.concatenate([l.reshape(-1, 1), m.reshape(-1, 1), n.reshape(-1, 1)], axis=1)
 
         matrices = dc2rot(lmn, rays)
         rays[:, 3:] = matrices.apply(rays[:, 3:])
+        
         return rays
 
 
