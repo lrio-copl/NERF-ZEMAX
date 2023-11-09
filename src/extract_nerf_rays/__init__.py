@@ -9,18 +9,14 @@ from nerfstudio.exporter.exporter_utils import collect_camera_poses
 import nerfstudio.utils.poses as pose_utils
 from scipy.spatial.transform import Rotation as R
 
-def dc2rot(lmn):
-    v2 = np.cross(lmn, [0,0,1], axis=0)
-    v2 -= np.sum(v2 * lmn, axis= 0) * lmn
-    v3 = np.cross(lmn, v2, axis=0)
-    v2 /= np.linalg.norm(v2)
-    v3 /= np.linalg.norm(v3)
-    matrices = np.stack([
-        np.stack(v3, axis=-1),
-        np.stack(v2, axis=-1),
-        np.stack(lmn, axis=-1),
-        ], axis=-2)
-
+def dc2rot(lmn, rays):
+    xy = rays[:,:2] #valeurs pour croiser l'axe z
+    z = (-lmn[:,0]*xy[:,0] - lmn[:,1]*xy[:,1])/lmn[:,2] #coordonée z pour orthogonal
+    v2 = np.concatenate([xy, z.reshape(-1, 1)], axis=1)
+    v2 /= np.linalg.norm(v2, axis=1, keepdims=True)
+    v3 = np.cross(lmn, v2, axis=1)
+    v3 /= np.linalg.norm(v3, axis=1, keepdims=True)
+    matrices = np.stack([lmn, v2, v3], axis=1)
     matrices = R.from_matrix(matrices)
     return matrices
 
@@ -64,9 +60,10 @@ class NerfRays:
             l = np.sin(phi) * np.cos(theta)
             m = np.sin(phi) * np.sin(theta)
             n = np.cos(phi)
-            lmn = [l,m,n]
+            lmn = np.concatenate([l, m, n])
+            lmn = lmn.reshape(-1, 3)
 
-        matrices = dc2rot(lmn)
+        matrices = dc2rot(lmn, rays)
         rays[:, 3:] = matrices.apply(rays[:, 3:])
         return rays
 
@@ -256,7 +253,7 @@ class NerfRays:
             )
             c2w = c2w_pose
   
-        #ray_data = self.incident(ray_data)
+        ray_data = self.incident(ray_data)
         ray_data = self.aspherique(ray_data, offset_microlens)
         ray_data = self.tranform_nerf_rays(
             ray_data,
