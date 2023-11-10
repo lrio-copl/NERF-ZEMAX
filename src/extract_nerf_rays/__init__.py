@@ -7,7 +7,18 @@ from nerfstudio.process_data.realitycapture_utils import _get_rotation_matrix as
 from nerfstudio.cameras.rays import RayBundle
 from nerfstudio.exporter.exporter_utils import collect_camera_poses
 import nerfstudio.utils.poses as pose_utils
+from scipy.spatial.transform import Rotation as R
 
+def dc2rot(lmn, rays):
+    xy = rays[:,:2] #valeurs pour croiser l'axe z
+    z = (-lmn[:,0]*xy[:,0] - lmn[:,1]*xy[:,1])/lmn[:,2] #coordonée z pour orthogonal
+    v2 = np.concatenate([xy, z.reshape(-1, 1)], axis=1)
+    v2 /= np.linalg.norm(v2, axis=1, keepdims=True)
+    v3 = np.cross(lmn, v2, axis=1)
+    v3 /= np.linalg.norm(v3, axis=1, keepdims=True)
+    matrices = np.stack([lmn, v2, v3], axis=1)
+    matrices = R.from_matrix(matrices)
+    return matrices
 
 class NerfRays:
     def __init__(self, config):
@@ -42,56 +53,39 @@ class NerfRays:
             )
         return output_rays
 
-    def rot_x(self, phi):
-        cos_phi = np.cos(phi)
-        sin_phi = np.sin(phi)
-        zeros = np.zeros_like(phi)
-        ones = np.ones_like(phi)
-    
-        rot_x = np.stack([
-            np.stack([ones, zeros, zeros, zeros], axis=-1),
-            np.stack([zeros, cos_phi, -sin_phi, zeros], axis=-1),
-            np.stack([zeros, sin_phi, cos_phi, zeros], axis=-1),
-            np.stack([zeros, zeros, zeros, ones], axis=-1)
-        ], axis=-2)
-    
-        return rot_x
+    def incident(self, rays, lmn = None):
+        if lmn is None:
+            theta = np.linspace(-np.pi/2, np.pi/2, rays.shape[0])
+            phi = np.linspace(-np.pi/2, np.pi/2, rays.shape[0])
+            l = np.sin(phi) * np.cos(theta)
+            m = np.sin(phi) * np.sin(theta)
+            n = np.cos(phi)
+            lmn = np.concatenate([l.reshape(-1, 1), m.reshape(-1, 1), n.reshape(-1, 1)], axis=1)
 
-    def rot_y(self, theta):
-        cos_theta = np.cos(theta)
-        sin_theta = np.sin(theta)
-        zeros = np.zeros_like(theta)
-        ones = np.ones_like(theta)
-        rot_y = np.stack([
-            np.stack([cos_theta, zeros, sin_theta, zeros], axis=-1),
-            np.stack([zeros, ones, zeros, zeros], axis=-1),
-            np.stack([-sin_theta, zeros, cos_theta, zeros], axis=-1),
-            np.stack([zeros, zeros, zeros, ones], axis=-1)
-        ], axis=-2)
-        return rot_y
+        matrices = dc2rot(lmn, rays)
+        rays[:, 3:] = matrices.apply(rays[:, 3:])
+        
+        return rays
 
-    def spherique(self, rays, R):
-        if R != 0:
-            n = rays[:, 0] / 0.9875
-            m = rays[:, 1] / 0.9875
-            theta = 0.9875 / R
-            trans_x = 0.9875 * n - R * np.sin(n * theta)
-            trans_y = 0.9875 * m - R * np.sin(m * theta)
-            trans_z = R - (R * np.cos(n * theta) * np.cos(m * theta))
 
-            rays[:, 0] -= trans_x
-            rays[:, 1] -= trans_y
-            rays[:, 2] -= trans_z
+    def aspherique(self, rays, rayon, coef=np.zeros(1), k=0):
+        if rayon != 0:
+            i = rays[:,:2]
+            theta = 1 / rayon
+            angles = i*theta
+            trans = i - rayon * np.sin(angles)
+            a =np.arange(4, 4+(2*len(coef)), 2)
+            r = np.sqrt(np.sum(np.square(trans),axis=1))
+            c = np.sum(coef * np.power(np.tile(r, (len(coef), 1)).T, a), axis=1)
+            argument = 1 - (1 + k) * (np.square(r) / rayon**2)
+            argument = np.maximum(argument, 0)  #évite les chiffres négatifs dans la racine
+            trans_z = np.square(r) / (rayon * (1 + np.sqrt(argument))) + c
+            trans = np.concatenate((trans, trans_z[:, np.newaxis]), axis=1)
 
-            theta = n * theta
-            phi = m * theta
+            rays[:, :3] -= trans
 
-            rot_x_matrices = self.rot_x(phi)
-            rot_y_matrices = self.rot_y(theta)
-
-            c2w = np.einsum('bij,bjk->bik', rot_x_matrices, rot_y_matrices)
-
-            rays[:, 3:] = np.einsum('bij,bj->bi', c2w[:, :3, :3], rays[:, 3:])
+            matrix = R.from_euler('yz', angles)
+            rays[:, 3:] = matrix.apply(rays[:,3:])
 
         return rays
 
@@ -258,7 +252,9 @@ class NerfRays:
                 )
             )
             c2w = c2w_pose
-        ray_data = self.spherique(ray_data, offset_microlens)
+  
+        ray_data = self.incident(ray_data)
+        ray_data = self.aspherique(ray_data, offset_microlens)
         ray_data = self.tranform_nerf_rays(
             ray_data,
             offset_trans[0],
