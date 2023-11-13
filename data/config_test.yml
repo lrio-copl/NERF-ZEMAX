@@ -13,3 +13,4 @@ Y translation: 0
 Z distance microlens: 0
 Z rotation: 0
 Z translation: 0
+num_diffuse_rays: 1000

@@ -9,6 +9,26 @@ from nerfstudio.exporter.exporter_utils import collect_camera_poses
 import nerfstudio.utils.poses as pose_utils
 from scipy.spatial.transform import Rotation as R
 
+def generate_diffuse(nb_rays):
+    xy = np.random.rand(nb_rays, 2)
+    z = np.zeros((nb_rays, 1))
+    xyz = np.concatenate([xy, z], axis=1)
+
+    rt = np.random.rand(nb_rays, 2)
+    xf = rt[:, 0] * np.cos(2 * np.pi * rt[:, 1])
+    yf = rt[:, 0] * np.sin(2 * np.pi * rt[:, 1])
+    zf = np.ones(nb_rays).reshape(-1, 1)
+
+    lmn = np.column_stack([xf, yf, zf]) - xyz
+    lmn /= np.linalg.norm(lmn, axis=1,keepdims=True)
+    
+    rays = np.concatenate([xyz, lmn], axis=1)
+
+    return rays
+
+
+
+
 def dc2rot(lmn, rays):
     xy = rays[:,:2] #valeurs pour croiser l'axe z
     z = (-lmn[:,0]*xy[:,0] - lmn[:,1]*xy[:,1])/lmn[:,2] #coordonée z pour orthogonal
@@ -28,14 +48,21 @@ class NerfRays:
         self.ray_data_load = np.loadtxt(
             self.yaml_file["Ray file"], skiprows=2, encoding="UTF-16", delimiter=","
         )
+        num_diffuse_rays = self.yaml_file.get("num_diffuse_rays", None)
+        print(num_diffuse_rays)
         self.ray_data_load_0 = np.array([[0, 0, 0, 0, 0, 1]]).astype(float)
 
-        self.ray_data = self.extend_nerf_rays(
-            self.ray_data_load, self.yaml_file["Extended ray file"]
-        )
-        self.ray_data_0 = self.extend_nerf_rays(
-            self.ray_data_load_0, self.yaml_file["Extended ray file"]
-        )
+        if num_diffuse_rays is not None:
+            self.ray_data = generate_diffuse(num_diffuse_rays)
+            self.ray_data_0 = np.tile(self.ray_data_load_0, (len(self.ray_data), 1))
+        else:
+            self.ray_data_0 = self.extend_nerf_rays(
+                self.ray_data_load_0, self.yaml_file["Extended ray file"]
+            )
+            self.ray_data = self.extend_nerf_rays(
+                self.ray_data_load, self.yaml_file["Extended ray file"]
+            )
+
 
     def reload_yaml(self):
         self.yaml_file = load(open(self.config_file), Loader=CLoader)
@@ -253,7 +280,7 @@ class NerfRays:
             )
             c2w = c2w_pose
   
-        ray_data = self.incident(ray_data)
+        #ray_data = self.incident(ray_data)
         ray_data = self.aspherique(ray_data, offset_microlens)
         ray_data = self.tranform_nerf_rays(
             ray_data,
