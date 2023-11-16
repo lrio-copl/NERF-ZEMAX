@@ -17,13 +17,11 @@ def generate_diffuse(nb_rays):
     rt = np.random.rand(nb_rays, 2)
     xf = rt[:, 0] * np.cos(2 * np.pi * rt[:, 1])
     yf = rt[:, 0] * np.sin(2 * np.pi * rt[:, 1])
-    zf = np.ones(nb_rays).reshape(-1, 1)
+    zf = -np.ones(nb_rays).reshape(-1, 1)
 
     lmn = np.column_stack([xf, yf, zf]) - xyz
     lmn /= np.linalg.norm(lmn, axis=1,keepdims=True)
-    
     rays = np.concatenate([xyz, lmn], axis=1)
-
     return rays
 
 
@@ -344,7 +342,6 @@ class NerfRays:
 
         ray_data_source[:, 3:] *= -1
         write_rgb = np.clip(write_rgb, 0, 1)
-
         return (
             self.yaml_file["Output file"],
             ray_data_source,
