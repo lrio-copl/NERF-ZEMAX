@@ -48,12 +48,11 @@ class NerfRays:
         self.ray_data_load = np.loadtxt(
             self.yaml_file["Ray file"], skiprows=2, encoding="UTF-16", delimiter=","
         )
-        num_diffuse_rays = self.yaml_file.get("num_diffuse_rays", None)
-        print(num_diffuse_rays)
+        self.num_diffuse_rays = self.yaml_file.get("num_diffuse_rays", None)
         self.ray_data_load_0 = np.array([[0, 0, 0, 0, 0, 1]]).astype(float)
 
-        if num_diffuse_rays is not None:
-            self.ray_data = generate_diffuse(num_diffuse_rays)
+        if self.num_diffuse_rays is not None:
+            self.ray_data = generate_diffuse(self.num_diffuse_rays)
             self.ray_data_0 = np.tile(self.ray_data_load_0, (len(self.ray_data), 1))
         else:
             self.ray_data_0 = self.extend_nerf_rays(
