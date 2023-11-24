@@ -9,22 +9,29 @@ from nerfstudio.exporter.exporter_utils import collect_camera_poses
 import nerfstudio.utils.poses as pose_utils
 from scipy.spatial.transform import Rotation as R
 
-def generate_diffuse(nb_rays):
-    xy = np.random.rand(nb_rays, 2)
+def square_plane(nb_rays, w=1, h=1):
+    xy = (np.random.rand(nb_rays, 2) -0.5)*2
+    xy[:,0] *= w
+    xy[:,1] *= h
     z = np.zeros((nb_rays, 1))
     xyz = np.concatenate([xy, z], axis=1)
+    print(np.mean(xyz[:,0], axis=0))
+    return xyz
 
+def circle_plane(nb_rays, rayon = 1):
     rt = np.random.rand(nb_rays, 2)
-    xf = rt[:, 0] * np.cos(2 * np.pi * rt[:, 1])
-    yf = rt[:, 0] * np.sin(2 * np.pi * rt[:, 1])
-    zf = -np.ones(nb_rays).reshape(-1, 1)
+    x = rayon * rt[:, 0] * np.cos(2*np.pi * rt[:, 1])
+    y = rayon * rt[:, 0] * np.sin(2*np.pi * rt[:, 1])
+    z = np.ones((nb_rays, 1))
+    xyz = np.column_stack([x, y, z])
+    return xyz
 
-    lmn = np.column_stack([xf, yf, zf]) - xyz
+def generate_diffuse(nbrays, plane1 = square_plane, plane2 = circle_plane):
+    xyz = plane1(nbrays)
+    lmn = plane2(nbrays) - xyz
     lmn /= np.linalg.norm(lmn, axis=1,keepdims=True)
     rays = np.concatenate([xyz, lmn], axis=1)
     return rays
-
-
 
 
 def dc2rot(lmn, rays):
