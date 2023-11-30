@@ -8,6 +8,51 @@ from nerfstudio.cameras.rays import RayBundle
 from nerfstudio.exporter.exporter_utils import collect_camera_poses
 import nerfstudio.utils.poses as pose_utils
 from scipy.spatial.transform import Rotation as R
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+def dc2rot(lmn, rays, show = False):
+    x = rays[:,0]
+    y = rays[:,1]
+    z = (-lmn[:,0]*x - lmn[:,1]*y)/lmn[:,2] #coordonée z pour orthogonal (porduit scalaire = 0) 0 = x1x2+y1y2+z1z2 -> z2 = -(x1x2+y1y2)/z1
+    v2 = np.concatenate([x.reshape(-1, 1),y.reshape(-1, 1), z.reshape(-1, 1)], axis=1) #premier vecteur orthogonal
+    v2 /= np.linalg.norm(v2, axis=1, keepdims=True) #normalisation
+    v3 = np.cross(lmn, v2, axis=1) #troisième vecteur orthogonal
+    v3 /= np.linalg.norm(v3, axis=1, keepdims=True) #normalisation
+    matrices = np.dstack([v2, v3, lmn])
+    matrices = R.from_matrix(matrices)
+
+    if show:
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        origin = np.zeros(3)
+        colors = ['r', 'g', 'b']
+        for i, color in enumerate(colors):
+            column = matrices.as_matrix()[0][:, i]
+            ax.quiver(*origin, *column, color=color, arrow_length_ratio=0.1, label=f'Vector {i+1}')
+
+        ax.quiver(*origin, 0, 0, 1, color='k', arrow_length_ratio=0.1)
+        ax.quiver(*origin, 0, 1, 0, color='k', arrow_length_ratio=0.1)
+        ax.quiver(*origin, 1, 0, 0, color='k', arrow_length_ratio=0.1)
+
+        ax.set_xlim([0, 1])
+        ax.set_ylim([0, 1])
+        ax.set_zlim([0, 1])
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        ax.legend()
+        plt.show()
+
+    return matrices
+    
+
+#lmn = np.array([[1/np.sqrt(3), 1/np.sqrt(3), 1/np.sqrt(3)], [1/np.sqrt(3), 1/np.sqrt(3), 1/np.sqrt(3)], [1/np.sqrt(3), 1/np.sqrt(3), 1/np.sqrt(3)]])
+#vec = np.array([[1,0,0], [0,1,0], [0,0,1]])
+#rays = np.array([[1, 2, 3], [1, 2, 3],[1, 2,3]])
+#matrices = dc2rot(lmn,rays, True)
+
 
 def square_plane(nb_rays, w=1, h=1):
     xy = (np.random.rand(nb_rays, 2) -0.5)*2
@@ -15,7 +60,7 @@ def square_plane(nb_rays, w=1, h=1):
     xy[:,1] *= h
     z = np.zeros((nb_rays, 1))
     xyz = np.concatenate([xy, z], axis=1)
-    print(np.mean(xyz[:,0], axis=0))
+
     return xyz
 
 def circle_plane(nb_rays, rayon = 1):
@@ -26,25 +71,51 @@ def circle_plane(nb_rays, rayon = 1):
     xyz = np.column_stack([x, y, z])
     return xyz
 
-def generate_diffuse(nbrays, plane1 = square_plane, plane2 = circle_plane):
+def half_sphere(nb_rays, rayon=1, ax='z', show = False):
+    axis_val = {'x': 0, 'y': 1, 'z': 2}
+    xyz = np.random.rand(nb_rays, 3)
+    chosen_axis = np.ones(3, dtype=bool)
+    chosen_axis[axis_val[ax]] = False
+    xyz[:, chosen_axis] = (xyz[:, chosen_axis] - 0.5) * 2
+    xyz /= np.linalg.norm(xyz, axis=1)[:, np.newaxis]
+    xyz *= rayon
+    if show == True:
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], s=5)
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        plt.show()
+   
+    return xyz
+
+def generate_diffuse_plane(nbrays, plane1 = square_plane, plane2 = circle_plane):
     xyz = plane1(nbrays)
     lmn = plane2(nbrays) - xyz
     lmn /= np.linalg.norm(lmn, axis=1,keepdims=True)
     rays = np.concatenate([xyz, lmn], axis=1)
+
     return rays
 
+def generate_diffuse_sphere(nbrays, rayon1 = 1, rayon2 = 1, convexe = False):
+    if convexe:
+        xyz = half_sphere(nbrays, rayon=rayon1, ax='z', show=False)
+        lmn = xyz.copy()
+        xyz[:, 2] -= 1
+        xyz *= -1
+    else:
+        xyz = half_sphere(nbrays, rayon=rayon1, ax='z', show=False)
+        lmn = xyz.copy()
 
-def dc2rot(lmn, rays):
-    xy = rays[:,:2] #valeurs pour croiser l'axe z
-    z = (-lmn[:,0]*xy[:,0] - lmn[:,1]*xy[:,1])/lmn[:,2] #coordonée z pour orthogonal
-    v2 = np.concatenate([xy, z.reshape(-1, 1)], axis=1)
-    v2 /= np.linalg.norm(v2, axis=1, keepdims=True)
-    v3 = np.cross(lmn, v2, axis=1)
-    v3 /= np.linalg.norm(v3, axis=1, keepdims=True)
-    matrices = np.stack([lmn, v2, v3], axis=1)
-    matrices = R.from_matrix(matrices)
-    return matrices
+    lmn /= np.linalg.norm(lmn, axis=1,keepdims=True)
+    directions = half_sphere(nbrays, rayon=rayon2, ax='z', show=False)
+    rot = dc2rot(lmn,directions)
+    directions = rot.apply(directions)
+    rays = np.concatenate([xyz, directions], axis=1)
 
+    return rays
+   
 class NerfRays:
     def __init__(self, config):
         self.config_file = config
@@ -57,7 +128,8 @@ class NerfRays:
         self.ray_data_load_0 = np.array([[0, 0, 0, 0, 0, 1]]).astype(float)
 
         if self.num_diffuse_rays is not None:
-            self.ray_data = generate_diffuse(self.num_diffuse_rays)
+            self.ray_data = generate_diffuse_sphere(self.num_diffuse_rays)
+
             self.ray_data_0 = np.tile(self.ray_data_load_0, (len(self.ray_data), 1))
         else:
             self.ray_data_0 = self.extend_nerf_rays(
