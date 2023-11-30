@@ -1,38 +1,53 @@
+---
+lang: en-US
+---
+
 # NERF-ZEMAX
 
-Pour rouler sur Serveur5
+## Installation
 
-``` sh
-python main2.py
+Clone the repository and install the dependencies:
+
+``` toml
+install_requires =
+    matplotlib >= "3.7"
+    numpy >= "1.25"
+    pyyaml >= "6.0"
+    nerfstudio >= "0.3.1"
+    torch >= "2.0.1+cu118"
+    scipy >= "1.10.1"
 ```
 
 
-Roule la génération de rayons standard
+## Run the script
+
+With an environment that contains all the dependencies, run the script:
 
 ``` sh
 python gui.py
 ```
 
 
-Roule la visualisation avec génération rapide. Permet aussi la génération de rayons et l'écriture de YAML pour les coordonées du système.
+It is import that the config file is in the directory `./data/config_test.yml`.
 
 ## Config
 
-Pour main2.py (et aussi main3.py) on peut modifier les paramètres dans `data/config_test.yml` pour main2 et `data/config_test_simple.yml` pour main3
+We can modify the default config that `gui.py` uses to run the program. The config file is a YAML file that contains the following parameters:
 
 ``` yaml
-Ray file: data/mapping_simple_the_true_pinhole.txt #Fichier de rayon pour 1 micro-lentilles
-Nerf file: C:\outputs\test_bureau_2\nerfacto\2023-09-16_153142\config.yml #Fichier avec le NERF pour nerfstudio
-Output file: test_extended.sdf  #output
-Extended ray file: data/microlensxperia9875.dat #Fichier pour étendre les positions des autres micro-lentilles
-Working directory: C:\\ #ne pas toucher, important pour nerfstudio for some reasons
-Scale: 0.0075 #Scale entre NERf et Zemax
-Reference pose: '0276' #Pose de référence (comportement weird en ce moment)
-Z translation: 3 #Translation en Z par rapport àla pose
-Y translation: -25 #même chose en Y
-X translation: -15 #Même chose en X
-Z rotation: 3 #Translation en Z par rapport àla pose
-Y rotation: -25 #même chose en Y
-X rotation: -15 #Même chose en X
-Factor: 9945 #Pour accélérer calcul de rayon pour nerf studio, ça dépend du nombres de rayons. Ne pas toucher dans le fond
+Ray file: data/mapping_simple_the_true_pinhole.txt # Ray file for 1 micro-lens
+Nerf file: C:\outputs\test_bureau_2\nerfacto\2023-09-16_153142\config.yml # File containing yaml for the NERF
+Output file: test_extended.sdf  # Output file
+Extended ray file: data/microlensxperia9875.dat # File to extend microlens for our
+Working directory: C:\\ # Reference directory for NerfStudio
+Scale: 0.0075 # Scale factor between NERf and Lens Model
+Reference pose: '0276' # Reference Pose
+Z translation: 3 # Z translation from the reference pose
+Y translation: -25 # Y translation from the reference pose
+
+X translation: -15 # X translation from the reference pose
+Z rotation: 3 # Z translation from the reference pose
+Y rotation: -25 # Y translation from the reference pose
+X rotation: -15 # X translation from the reference pose
+Factor: 9945 # Number of rays to compute at once by the NERF. Revert to 1 if there is any issues
 ```
