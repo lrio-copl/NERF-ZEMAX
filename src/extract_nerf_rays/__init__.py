@@ -71,19 +71,32 @@ def circle_plane(nb_rays, rayon = 1):
     xyz = np.column_stack([x, y, z])
     return xyz
 
-def half_sphere(nb_rays, rayon=1, theta = 180, phi = 180, ax='z', show=False):
+def half_sphere(nb_rays, theta=180, phi=180, ax='z', show=False):
     axis_val = {'x': 0, 'y': 1, 'z': 2}
     theta = np.deg2rad(theta)
     phi = np.deg2rad(phi)
-    theta = np.random.rand(nb_rays) * theta + (np.pi - theta)/2
-    phi = np.random.rand(nb_rays) * phi + (np.pi - phi)/2
-    r = np.ones(nb_rays) * rayon
+    
+    theta = np.random.rand(nb_rays) * theta + (np.pi - theta) / 2
+    phi = np.random.rand(nb_rays) * phi + (np.pi - phi) / 2
+    r = np.ones(nb_rays)
     
     xyz = np.zeros((nb_rays, 3))
-    xyz[:, axis_val[ax]] = r * np.sin(theta) * np.cos(phi)
-    xyz[:, (axis_val[ax] + 1) % 3] = r * np.sin(theta) * np.sin(phi)
-    xyz[:, (axis_val[ax] + 2) % 3] = r * np.cos(theta)
     
+    if ax == 'y':
+        xyz[:, (axis_val[ax] + 1) % 3] = r * np.sin(theta) * np.cos(phi)  # Swap x and y
+        xyz[:, axis_val[ax]] = r * np.sin(theta) * np.sin(phi)  # Swap x and y
+        xyz[:, (axis_val[ax] + 2) % 3] = r * np.cos(theta)
+    elif ax == 'x':
+        xyz[:, (axis_val[ax] + 1) % 3] = r * np.sin(theta) * np.cos(phi)
+        xyz[:, axis_val[ax]] = r * np.sin(theta) * np.sin(phi)
+        xyz[:, (axis_val[ax] + 2) % 3] = r * np.cos(theta)
+    elif ax == 'z':
+        xyz[:, (axis_val[ax] + 2) % 3] = r * np.sin(theta) * np.cos(phi)
+        xyz[:, axis_val[ax]] = r * np.sin(theta) * np.sin(phi)
+        xyz[:, (axis_val[ax] + 1) % 3] = r * np.cos(theta)
+    
+    
+
     if show:
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
@@ -92,7 +105,7 @@ def half_sphere(nb_rays, rayon=1, theta = 180, phi = 180, ax='z', show=False):
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
         plt.show()
-   
+
     return xyz
 
 def generate_diffuse_plane(nbrays, plane1 = square_plane, plane2 = circle_plane):
@@ -103,18 +116,19 @@ def generate_diffuse_plane(nbrays, plane1 = square_plane, plane2 = circle_plane)
 
     return rays
 
-def generate_diffuse_sphere(nbrays, rayon1 = 1, rayon2 = 1,direction_theta = 180, direction_phi = 180, convexe = False):
+def generate_diffuse_sphere(nbrays, rayon1 = 1,direction_theta = 90, direction_phi = 90, convexe = False):
     if convexe:
-        xyz = half_sphere(nbrays, rayon=rayon1, ax='z', show=False)
+        xyz = half_sphere(nbrays, ax='z', show=False)
         lmn = xyz.copy()
         xyz[:, 2] -= 1
-        xyz *= -1
+        xyz *= -rayon1
     else:
-        xyz = half_sphere(nbrays, rayon=rayon1, ax='z', show=False)
+        xyz = half_sphere(nbrays, ax='z', show=False)
         lmn = xyz.copy()
+        xyz *= rayon1
 
     lmn /= np.linalg.norm(lmn, axis=1,keepdims=True)
-    directions = half_sphere(nbrays, rayon=rayon2, theta = direction_theta, phi=direction_phi, ax='z', show=False)
+    directions = half_sphere(nbrays, theta = direction_theta, phi=direction_phi, ax='z', show=False)
     rot = dc2rot(lmn,directions)
     directions = rot.apply(directions)
     rays = np.concatenate([xyz, directions], axis=1)
