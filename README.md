@@ -28,11 +28,22 @@ python gui.py
 ```
 
 
-It is import that the config file is in the directory `./data/config_test.yml`.
+It is important that the config file is in the directory `./data/config_test.yml`.
+
+## Diffuse ray generation for Zemax Optic Studio (ZOS)
+
+It is possible to generate rays either in a half-sphere or on a plane to import in ZOS. This ray generation mode is not compatible with de gui and should only be used with the script
+
+``` sh
+python main2.py
+```
+
+
+As with the gui, the config file should be in the directory `./data/config_test.yml`.
 
 ## Config
 
-We can modify the default config that `gui.py` uses to run the program. The config file is a YAML file that contains the following parameters:
+We can modify the default config that `gui.py` and  `main2.py` use to run the program. The config file is a YAML file that contains the following parameters:
 
 ``` yaml
 Ray file: data/mapping_simple_the_true_pinhole.txt # Ray file for 1 micro-lens
