@@ -46,56 +46,52 @@ def dc2rot(lmn, rays, show = False):
         plt.show()
 
     return matrices
-    
-
-#lmn = np.array([[1/np.sqrt(3), 1/np.sqrt(3), 1/np.sqrt(3)], [1/np.sqrt(3), 1/np.sqrt(3), 1/np.sqrt(3)], [1/np.sqrt(3), 1/np.sqrt(3), 1/np.sqrt(3)]])
-#vec = np.array([[1,0,0], [0,1,0], [0,0,1]])
-#rays = np.array([[1, 2, 3], [1, 2, 3],[1, 2,3]])
-#matrices = dc2rot(lmn,rays, True)
 
 
-def square_plane(nb_rays, w=1, h=1):
-    xy = (np.random.rand(nb_rays, 2) -0.5)*2
-    xy[:,0] *= w
-    xy[:,1] *= h
-    z = np.zeros((nb_rays, 1))
+def square_plane(nb_rays, w=1, h=1, z= 0):
+    z *= np.ones((nb_rays, 1)) #place le plan au z voulu
+    xy = (np.random.rand(nb_rays, 2) -0.5)*2 #x et y de -1 à 1
+    xy[:,0] *= w #ajustement à la largeur voulue
+    xy[:,1] *= h #ajustement à la hauteur voulue
     xyz = np.concatenate([xy, z], axis=1)
 
     return xyz
 
-def circle_plane(nb_rays, rayon = 1):
-    rt = np.random.rand(nb_rays, 2)
+def circle_plane(nb_rays, rayon = 1, z = 1):
+    z *= np.ones((nb_rays, 1)) #place le plan au z voulu
+    rt = np.random.rand(nb_rays, 2) #génère rayon et theta
+    #polaire à cartésien
     x = rayon * rt[:, 0] * np.cos(2*np.pi * rt[:, 1])
     y = rayon * rt[:, 0] * np.sin(2*np.pi * rt[:, 1])
-    z = np.ones((nb_rays, 1))
     xyz = np.column_stack([x, y, z])
     return xyz
 
 def half_sphere(nb_rays, theta=180, phi=180, ax='z', show=False):
-    axis_val = {'x': 0, 'y': 1, 'z': 2}
-    theta = np.deg2rad(theta)
+    axis_val = {'x': 0, 'y': 1, 'z': 2} #orientation de la sphère
+    #nombre de degrés 
+    theta = np.deg2rad(theta) 
     phi = np.deg2rad(phi)
-    
+    #nombre de degrés centrés autour de 90 degrés
     theta = np.random.rand(nb_rays) * theta + (np.pi - theta) / 2
     phi = np.random.rand(nb_rays) * phi + (np.pi - phi) / 2
     r = np.ones(nb_rays)
-    
+
+    #sphérique à cartésien
     xyz = np.zeros((nb_rays, 3))
-    
-    if ax == 'y':
-        xyz[:, (axis_val[ax] + 1) % 3] = r * np.sin(theta) * np.cos(phi)  # Swap x and y
-        xyz[:, axis_val[ax]] = r * np.sin(theta) * np.sin(phi)  # Swap x and y
-        xyz[:, (axis_val[ax] + 2) % 3] = r * np.cos(theta)
-    elif ax == 'x':
-        xyz[:, (axis_val[ax] + 1) % 3] = r * np.sin(theta) * np.cos(phi)
-        xyz[:, axis_val[ax]] = r * np.sin(theta) * np.sin(phi)
-        xyz[:, (axis_val[ax] + 2) % 3] = r * np.cos(theta)
+    if ax == 'x':
+        xyz[:, 1] = r * np.sin(theta) * np.cos(phi)
+        xyz[:, 0] = r * np.sin(theta) * np.sin(phi)
+        xyz[:, 2] = r * np.cos(theta)
+        
+    elif ax == 'y':
+        xyz[:, 2] = r * np.sin(theta) * np.cos(phi)
+        xyz[:, 1] = r * np.sin(theta) * np.sin(phi)
+        xyz[:, 0] = r * np.cos(theta)
+
     elif ax == 'z':
-        xyz[:, (axis_val[ax] + 2) % 3] = r * np.sin(theta) * np.cos(phi)
-        xyz[:, axis_val[ax]] = r * np.sin(theta) * np.sin(phi)
-        xyz[:, (axis_val[ax] + 1) % 3] = r * np.cos(theta)
-    
-    
+        xyz[:, 1] = r * np.sin(theta) * np.cos(phi)
+        xyz[:, 2] = r * np.sin(theta) * np.sin(phi)
+        xyz[:, 0] = r * np.cos(theta)
 
     if show:
         fig = plt.figure()
@@ -109,27 +105,27 @@ def half_sphere(nb_rays, theta=180, phi=180, ax='z', show=False):
     return xyz
 
 def generate_diffuse_plane(nbrays, plane1 = square_plane, plane2 = circle_plane):
-    xyz = plane1(nbrays)
-    lmn = plane2(nbrays) - xyz
-    lmn /= np.linalg.norm(lmn, axis=1,keepdims=True)
+    xyz = plane1(nbrays, z= 0) #origine à 0
+    lmn = plane2(nbrays, z = 1) - xyz #arrivée à 1
+    lmn /= np.linalg.norm(lmn, axis=1,keepdims=True) #normalisation lmn
     rays = np.concatenate([xyz, lmn], axis=1)
 
     return rays
 
 def generate_diffuse_sphere(nbrays, rayon1 = 1,direction_theta = 90, direction_phi = 90, convexe = False):
-    if convexe:
+    if convexe: #sommet à 0
         xyz = half_sphere(nbrays, ax='z', show=False)
         lmn = xyz.copy()
         xyz[:, 2] -= 1
         xyz *= -rayon1
-    else:
+    else: #centre à 0
         xyz = half_sphere(nbrays, ax='z', show=False)
         lmn = xyz.copy()
         xyz *= rayon1
 
-    lmn /= np.linalg.norm(lmn, axis=1,keepdims=True)
-    directions = half_sphere(nbrays, theta = direction_theta, phi=direction_phi, ax='z', show=False)
-    rot = dc2rot(lmn,directions)
+    lmn /= np.linalg.norm(lmn, axis=1,keepdims=True) #normalisation
+    directions = half_sphere(nbrays, theta = direction_theta, phi=direction_phi, ax='z', show=False) #génération de directions aléatoires sur une demi-sphère
+    rot = dc2rot(lmn,directions) #rotation pour que les rayons soient bien orientés par rapport à la sphère
     directions = rot.apply(directions)
     rays = np.concatenate([xyz, directions], axis=1)
 
@@ -146,8 +142,12 @@ class NerfRays:
         self.num_diffuse_rays = self.yaml_file.get("num_diffuse_rays", None)
         self.ray_data_load_0 = np.array([[0, 0, 0, 0, 0, 1]]).astype(float)
 
-        if self.num_diffuse_rays is not None:
+        if self.num_diffuse_rays is not None and shape == 'sphere':
             self.ray_data = generate_diffuse_sphere(self.num_diffuse_rays)
+
+            self.ray_data_0 = np.tile(self.ray_data_load_0, (len(self.ray_data), 1))
+        elif self.num_diffuse_rays is not None and shape == 'plane':
+            self.ray_data = generate_diffuse_plane(self.num_diffuse_rays)
 
             self.ray_data_0 = np.tile(self.ray_data_load_0, (len(self.ray_data), 1))
         else:
@@ -194,11 +194,13 @@ class NerfRays:
         if rayon != 0:
             i = rays[:,:2]
             theta = 1 / rayon
-            angles = i*theta
-            trans = i - rayon * np.sin(angles)
-            a =np.arange(4, 4+(2*len(coef)), 2)
-            r = np.sqrt(np.sum(np.square(trans),axis=1))
-            c = np.sum(coef * np.power(np.tile(r, (len(coef), 1)).T, a), axis=1)
+            angles = i*theta #position de chaque microlentille sur la sphère
+            trans = i - rayon * np.sin(angles) #translations pour que la distance entre les microlentilles soit la même sur la sphère
+            a =np.arange(4, 4+(2*len(coef)), 2) #exposant pour termes asphériques
+            r = np.sqrt(np.sum(np.square(trans),axis=1)) #coordonées polaires
+            c = np.sum(coef * np.power(np.tile(r, (len(coef), 1)).T, a), axis=1)#application des puissances sur r pour chaque coefficient
+
+            #calcul de la translation en z
             argument = 1 - (1 + k) * (np.square(r) / rayon**2)
             argument = np.maximum(argument, 0)  #évite les chiffres négatifs dans la racine
             trans_z = np.square(r) / (rayon * (1 + np.sqrt(argument))) + c
