@@ -50,4 +50,6 @@ Z rotation: 3 # Z translation from the reference pose
 Y rotation: -25 # Y translation from the reference pose
 X rotation: -15 # X translation from the reference pose
 Factor: 9945 # Number of rays to compute at once by the NERF. Revert to 1 if there is any issues
+num_diffuse_rays: 1000000 # Number of rays to generate sdf file in diffuse mode. This parameter should be empty for use with gui
+shape: 'plane' #Shape of the diffuse ray generation ('sphere' or 'plane')
 ```
