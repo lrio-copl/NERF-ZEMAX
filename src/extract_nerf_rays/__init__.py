@@ -67,7 +67,6 @@ def circle_plane(nb_rays, rayon = 1, z = 1):
     return xyz
 
 def half_sphere(nb_rays, theta=180, phi=180, ax='z', show=False):
-    axis_val = {'x': 0, 'y': 1, 'z': 2} #orientation de la sphère
     #nombre de degrés 
     theta = np.deg2rad(theta) 
     phi = np.deg2rad(phi)
@@ -112,7 +111,7 @@ def generate_diffuse_plane(nbrays, plane1 = square_plane, plane2 = circle_plane)
 
     return rays
 
-def generate_diffuse_sphere(nbrays, rayon1 = 1,direction_theta = 90, direction_phi = 90, convexe = False):
+def generate_diffuse_sphere(nbrays, rayon1 = 1,direction_theta = 180, direction_phi = 180, convexe = False):
     if convexe: #sommet à 0
         xyz = half_sphere(nbrays, ax='z', show=False)
         lmn = xyz.copy()
@@ -141,12 +140,12 @@ class NerfRays:
         )
         self.num_diffuse_rays = self.yaml_file.get("num_diffuse_rays", None)
         self.ray_data_load_0 = np.array([[0, 0, 0, 0, 0, 1]]).astype(float)
-
-        if self.num_diffuse_rays is not None and shape == 'sphere':
+        self.shape = self.yaml_file.get("shape", None)
+        if self.num_diffuse_rays is not None and self.shape == 'sphere':
             self.ray_data = generate_diffuse_sphere(self.num_diffuse_rays)
 
             self.ray_data_0 = np.tile(self.ray_data_load_0, (len(self.ray_data), 1))
-        elif self.num_diffuse_rays is not None and shape == 'plane':
+        elif self.num_diffuse_rays is not None and self.shape == 'plane':
             self.ray_data = generate_diffuse_plane(self.num_diffuse_rays)
 
             self.ray_data_0 = np.tile(self.ray_data_load_0, (len(self.ray_data), 1))
