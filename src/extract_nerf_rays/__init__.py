@@ -12,6 +12,12 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 def dc2rot(lmn, rays, show = False):
+    """
+    La fonction prend un vecteur lmn qui représente l'orientation de l'axe z et génère une matrice de rotation entre la référence du monde et la référence de la caméra.
+    lmn: vecteur de directopn
+    rays: rayons sur lesquels le vecteur sera appliqué
+    show: affichage des axes transformés pour le premier vecteur
+    """
     x = rays[:,0]
     y = rays[:,1]
     z = (-lmn[:,0]*x - lmn[:,1]*y)/lmn[:,2] #coordonée z pour orthogonal (porduit scalaire = 0) 0 = x1x2+y1y2+z1z2 -> z2 = -(x1x2+y1y2)/z1
@@ -49,6 +55,13 @@ def dc2rot(lmn, rays, show = False):
 
 
 def square_plane(nb_rays, w=1, h=1, z= 0):
+    """
+    La fonction génère des points uniformément répartis dans un plan rectangulaire
+    nb_rays: nombre de rayons à générer
+    w: largeur du plan
+    h: hauteur du plan
+    z: position du plan sur l'axe z
+    """
     z *= np.ones((nb_rays, 1)) #place le plan au z voulu
     xy = (np.random.rand(nb_rays, 2) -0.5)*2 #x et y de -1 à 1
     xy[:,0] *= w #ajustement à la largeur voulue
@@ -58,6 +71,12 @@ def square_plane(nb_rays, w=1, h=1, z= 0):
     return xyz
 
 def circle_plane(nb_rays, rayon = 1, z = 1):
+    """
+    La fonction génère des points uniformément répartis dans un plan circulaire
+    nb_rays: nombre de rayons à générer
+    rayon: rayon du plan
+    z: position du plan sur l'axe z
+    """
     z *= np.ones((nb_rays, 1)) #place le plan au z voulu
     rt = np.random.rand(nb_rays, 2) #génère rayon et theta
     #polaire à cartésien
@@ -67,6 +86,14 @@ def circle_plane(nb_rays, rayon = 1, z = 1):
     return xyz
 
 def half_sphere(nb_rays, theta=180, phi=180, ax='z', show=False):
+    """
+    La fonction génère des points uniformément répartis sur une demi sphère
+    nb_rays: nombre de rayons à générer
+    theta: limitation des rayons sur la demi-sphère autour de l'axe central
+    phi: limitation de des rayons sur la demi-sphère dans l'autre direction
+    ax: direction de la demisphère 
+    show: affichage de la demi-sphère
+    """
     #nombre de degrés 
     theta = np.deg2rad(theta) 
     phi = np.deg2rad(phi)
@@ -104,6 +131,12 @@ def half_sphere(nb_rays, theta=180, phi=180, ax='z', show=False):
     return xyz
 
 def generate_diffuse_plane(nbrays, plane1 = square_plane, plane2 = circle_plane):
+    """
+    La fonction génère des rayons d'un plan à un autre
+    nb_rays: nombre de rayons à générer
+    plane1: origine des rayons
+    plane2: arrivée des rayons
+    """
     xyz = plane1(nbrays, z= 0) #origine à 0
     lmn = plane2(nbrays, z = 1) - xyz #arrivée à 1
     lmn /= np.linalg.norm(lmn, axis=1,keepdims=True) #normalisation lmn
@@ -111,12 +144,20 @@ def generate_diffuse_plane(nbrays, plane1 = square_plane, plane2 = circle_plane)
 
     return rays
 
-def generate_diffuse_sphere(nbrays, rayon1 = 1,direction_theta = 180, direction_phi = 180, convexe = False):
+def generate_diffuse_sphere(nbrays, rayon = 1,direction_theta = 180, direction_phi = 180, convexe = False):
+    """
+    La fonction génère des rayons dans une demi-sphère
+    nb_rays: nombre de rayons à générer
+    rayon: rayon de la sphère d'origine des rayons
+    direction_theta: angle theta des directions générées pour les rayons
+    direction_phi: angle phi des directions générées pour les rayons
+    convexe: rayons vers l'intérieur ou l'extérieur de la sphère
+    """
     if convexe: #sommet à 0
         xyz = half_sphere(nbrays, ax='z', show=False)
         lmn = xyz.copy()
         xyz[:, 2] -= 1
-        xyz *= -rayon1
+        xyz *= -rayon
     else: #centre à 0
         xyz = half_sphere(nbrays, ax='z', show=False)
         lmn = xyz.copy()
@@ -142,7 +183,7 @@ class NerfRays:
         self.ray_data_load_0 = np.array([[0, 0, 0, 0, 0, 1]]).astype(float)
         self.shape = self.yaml_file.get("shape", None)
         if self.num_diffuse_rays is not None and self.shape == 'sphere':
-            self.ray_data = generate_diffuse_sphere(self.num_diffuse_rays)
+            self.ray_data = generate_diffuse_sphere(self.num_diffuse_rays, convexe=False)
 
             self.ray_data_0 = np.tile(self.ray_data_load_0, (len(self.ray_data), 1))
         elif self.num_diffuse_rays is not None and self.shape == 'plane':
@@ -175,6 +216,9 @@ class NerfRays:
         return output_rays
 
     def incident(self, rays, lmn = None):
+    """
+    Génération de directions lmn pour test d'orientation
+    """
         if lmn is None:
             theta = np.linspace(-np.pi/2, np.pi/2, rays.shape[0])
             phi = np.linspace(-np.pi/2, np.pi/2, rays.shape[0])
@@ -190,6 +234,14 @@ class NerfRays:
 
 
     def aspherique(self, rays, rayon, coef=np.zeros(1), k=0):
+    """
+    Permet de courber les lentilles de la matrice de façon sphérique ou asphérique
+    rays: rayons de la matrice (x,y,z,l,m,n)
+    rayon: rayon de courbure de la matrice
+    coef: coefficients pour l'asphérique
+    k: conicité (elliptique, sphérique, hyperbolique, parabolique)
+
+    """
         if rayon != 0:
             i = rays[:,:2]
             theta = 1 / rayon
