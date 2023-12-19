@@ -13,11 +13,12 @@ from mpl_toolkits.mplot3d import Axes3D
 
 def dc2rot(lmn, rays, show = False):
     """
-    La fonction prend un vecteur lmn qui représente l'orientation de l'axe z et génère une matrice de rotation entre la référence du monde et la référence de la caméra.
-    lmn: vecteur de directopn
-    rays: rayons sur lesquels le vecteur sera appliqué
-    show: affichage des axes transformés pour le premier vecteur
+    La fonction prend un vecteur lmn qui represente l'orientation de l'axe z et genere une matrice de rotation entre la reference du monde et la reference de la camera.
+    lmn: vecteur de directon
+    rays: rayons sur lesquels le vecteur sera applique
+    show: affichage des axes transformes pour le premier vecteur
     """
+
     x = rays[:,0]
     y = rays[:,1]
     z = (-lmn[:,0]*x - lmn[:,1]*y)/lmn[:,2] #coordonée z pour orthogonal (porduit scalaire = 0) 0 = x1x2+y1y2+z1z2 -> z2 = -(x1x2+y1y2)/z1
@@ -56,8 +57,8 @@ def dc2rot(lmn, rays, show = False):
 
 def square_plane(nb_rays, w=1, h=1, z= 0):
     """
-    La fonction génère des points uniformément répartis dans un plan rectangulaire
-    nb_rays: nombre de rayons à générer
+    La fonction genere des points uniformement repartis dans un plan rectangulaire
+    nb_rays: nombre de rayons a generer
     w: largeur du plan
     h: hauteur du plan
     z: position du plan sur l'axe z
@@ -72,8 +73,8 @@ def square_plane(nb_rays, w=1, h=1, z= 0):
 
 def circle_plane(nb_rays, rayon = 1, z = 1):
     """
-    La fonction génère des points uniformément répartis dans un plan circulaire
-    nb_rays: nombre de rayons à générer
+    La fonction genere des points uniformement repartis dans un plan circulaire
+    nb_rays: nombre de rayons a generer
     rayon: rayon du plan
     z: position du plan sur l'axe z
     """
@@ -87,12 +88,12 @@ def circle_plane(nb_rays, rayon = 1, z = 1):
 
 def half_sphere(nb_rays, theta=180, phi=180, ax='z', show=False):
     """
-    La fonction génère des points uniformément répartis sur une demi sphère
-    nb_rays: nombre de rayons à générer
-    theta: limitation des rayons sur la demi-sphère autour de l'axe central
-    phi: limitation de des rayons sur la demi-sphère dans l'autre direction
-    ax: direction de la demisphère 
-    show: affichage de la demi-sphère
+    La fonction genere des points uniformement repartis sur une demi sphere
+    nb_rays: nombre de rayons a generer
+    theta: limitation des rayons sur la demi-sphere autour de l'axe central
+    phi: limitation de des rayons sur la demi-sphere dans l'autre direction
+    ax: direction de la demisphere 
+    show: affichage de la demi-sphere
     """
     #nombre de degrés 
     theta = np.deg2rad(theta) 
@@ -132,10 +133,10 @@ def half_sphere(nb_rays, theta=180, phi=180, ax='z', show=False):
 
 def generate_diffuse_plane(nbrays, plane1 = square_plane, plane2 = circle_plane):
     """
-    La fonction génère des rayons d'un plan à un autre
-    nb_rays: nombre de rayons à générer
+    La fonction genere des rayons d'un plan a un autre
+    nb_rays: nombre de rayons a generer
     plane1: origine des rayons
-    plane2: arrivée des rayons
+    plane2: arrivee des rayons
     """
     xyz = plane1(nbrays, z= 0) #origine à 0
     lmn = plane2(nbrays, z = 1) - xyz #arrivée à 1
@@ -146,12 +147,12 @@ def generate_diffuse_plane(nbrays, plane1 = square_plane, plane2 = circle_plane)
 
 def generate_diffuse_sphere(nbrays, rayon = 1,direction_theta = 180, direction_phi = 180, convexe = False):
     """
-    La fonction génère des rayons dans une demi-sphère
-    nb_rays: nombre de rayons à générer
-    rayon: rayon de la sphère d'origine des rayons
-    direction_theta: angle theta des directions générées pour les rayons
-    direction_phi: angle phi des directions générées pour les rayons
-    convexe: rayons vers l'intérieur ou l'extérieur de la sphère
+    La fonction genere des rayons dans une demi-sphere
+    nb_rays: nombre de rayons a generer
+    rayon: rayon de la sphere d'origine des rayons
+    direction_theta: angle theta des directions generees pour les rayons
+    direction_phi: angle phi des directions generees pour les rayons
+    convexe: rayons vers l'interieur ou l'exterieur de la sphere
     """
     if convexe: #sommet à 0
         xyz = half_sphere(nbrays, ax='z', show=False)
@@ -161,7 +162,7 @@ def generate_diffuse_sphere(nbrays, rayon = 1,direction_theta = 180, direction_p
     else: #centre à 0
         xyz = half_sphere(nbrays, ax='z', show=False)
         lmn = xyz.copy()
-        xyz *= rayon1
+        xyz *= rayon
 
     lmn /= np.linalg.norm(lmn, axis=1,keepdims=True) #normalisation
     directions = half_sphere(nbrays, theta = direction_theta, phi=direction_phi, ax='z', show=False) #génération de directions aléatoires sur une demi-sphère
@@ -216,9 +217,9 @@ class NerfRays:
         return output_rays
 
     def incident(self, rays, lmn = None):
-    """
-    Génération de directions lmn pour test d'orientation
-    """
+        """
+        Generation de directions lmn pour test d'orientation
+        """
         if lmn is None:
             theta = np.linspace(-np.pi/2, np.pi/2, rays.shape[0])
             phi = np.linspace(-np.pi/2, np.pi/2, rays.shape[0])
@@ -234,14 +235,13 @@ class NerfRays:
 
 
     def aspherique(self, rays, rayon, coef=np.zeros(1), k=0):
-    """
-    Permet de courber les lentilles de la matrice de façon sphérique ou asphérique
-    rays: rayons de la matrice (x,y,z,l,m,n)
-    rayon: rayon de courbure de la matrice
-    coef: coefficients pour l'asphérique
-    k: conicité (elliptique, sphérique, hyperbolique, parabolique)
-
-    """
+        """
+        Permet de courber les lentilles de la matrice de facon spherique ou aspherique
+        rays: rayons de la matrice (x,y,z,l,m,n)
+        rayon: rayon de courbure de la matrice
+        coef: coefficients pour l'aspherique
+        k: conicite (elliptique, spherique, hyperbolique, parabolique)
+        """
         if rayon != 0:
             i = rays[:,:2]
             theta = 1 / rayon
@@ -256,7 +256,7 @@ class NerfRays:
             argument = np.maximum(argument, 0)  #évite les chiffres négatifs dans la racine
             trans_z = np.square(r) / (rayon * (1 + np.sqrt(argument))) + c
             trans = np.concatenate((trans, trans_z[:, np.newaxis]), axis=1)
-
+            rays = rays.astype(np.float64)
             rays[:, :3] -= trans
 
             matrix = R.from_euler('yz', angles)
