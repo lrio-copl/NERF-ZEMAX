@@ -5,7 +5,6 @@ from write_sdf import write_sdf
 
 test = loadtxt(
     "data/new_mapping_xyz_lmn_camera_position_2023-09-_z5(0.2)_precis.txt",
-    skiprows=2,
     encoding="UTF-16",
     delimiter=",",
 )
