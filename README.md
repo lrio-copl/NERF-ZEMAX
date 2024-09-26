@@ -28,11 +28,22 @@ python gui.py
 ```
 
 
-It is import that the config file is in the directory `./data/config_test.yml`.
+It is important that the config file is in the directory `./data/config_test.yml`.
+
+## Diffuse ray generation for Zemax Optic Studio (ZOS)
+
+It is possible to generate rays either in a half-sphere or on a plane to import in ZOS. This ray generation mode is not compatible with de gui and should only be used with the script
+
+``` sh
+python main2.py
+```
+
+
+As with the gui, the config file should be in the directory `./data/config_test.yml`.
 
 ## Config
 
-We can modify the default config that `gui.py` uses to run the program. The config file is a YAML file that contains the following parameters:
+We can modify the default config that `gui.py` and  `main2.py` use to run the program. The config file is a YAML file that contains the following parameters:
 
 ``` yaml
 Ray file: data/mapping_simple_the_true_pinhole.txt # Ray file for 1 micro-lens
@@ -50,4 +61,6 @@ Z rotation: 3 # Z translation from the reference pose
 Y rotation: -25 # Y translation from the reference pose
 X rotation: -15 # X translation from the reference pose
 Factor: 9945 # Number of rays to compute at once by the NERF. Revert to 1 if there is any issues
+num_diffuse_rays: 1000000 # Number of rays to generate sdf file in diffuse mode. This parameter should be empty for use with gui
+shape: 'plane' #Shape of the diffuse ray generation ('sphere' or 'plane')
 ```
